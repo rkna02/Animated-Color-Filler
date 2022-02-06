@@ -473,20 +473,18 @@ void ImgList::Clear()
      //ImgNode *node = northwest;
     for(int k = 0; k< widthCount; k++){
       cout<<"inner loop start"<<endl;
-      // if(k==0){
-      //   if(!node){
-          
-      //   }
-      //   else{
-      //     delete node;
-      //     node = NULL;
-      //   }
-      //   northwest = northwest -> south;
-      // }
-      // cout<<node->east.colour.h<<endl;
-      cout<<"middle inner loop"<<endl;
+      
       if(widthCount==1){
-
+      
+        delete node;
+        if(i != heightCount-1){
+          northwest = northwest->south;
+        }
+        else{
+          northwest = NULL;
+          node = NULL;
+        }
+        
       }
       else{
          while(node){ // if node is not null
@@ -502,6 +500,7 @@ void ImgList::Clear()
           node = NULL;
           northwest = NULL;
           southeast = NULL; 
+          
         }
         else{
           node = northwest;
@@ -510,11 +509,14 @@ void ImgList::Clear()
       }
       cout<<"inner loop ends"<<endl;
     }
+    if(i==heightCount-1){
+      cout<<"outter loop ends"<<endl;
+      break;
+    }
     northwest=northwest->south;
-    cout<<"outter loop ends"<<endl;
   }
  
-
+  
 
   // deallocate all the node
 }
