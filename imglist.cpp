@@ -245,8 +245,16 @@ unsigned int ImgList::GetDimensionY() const {
 *   x dimension.
 */
 unsigned int ImgList::GetDimensionFullX() const {
-  // replace the following line with your implementation
-  return -1;
+  ImgNode* currNode = northwest;
+  int width = 1;
+
+  while (currNode->east) {
+    width += currNode->skipright;
+    width += 1;
+    currNode = currNode->east;
+  }
+
+  return width;
 }
 
 
@@ -355,19 +363,27 @@ void ImgList::Carve(int selectionmode) {
 
   while (currRow->south) {
     ImgNode* removeNode = SelectNode(currRow, selectionmode);
+
+    // relink left and right ImgNodes and update skip value by 1
     removeNode->west->east = removeNode->east;
     removeNode->east->west = removeNode->west;
     removeNode->west->skipright += 1;
     removeNode->east->skipleft += 1;
 
-    // check if the ImgNode is in the first or last row
+    // take the removed node's skip values into account 
+    removeNode->west->skipright += removeNode->skipright;
+    removeNode->east->skipleft += removeNode->skipleft;
+
+    // check if the ImgNode is in the first or last row (north or south points to NULL)
     if (removeNode->north) {
       removeNode->north->south = removeNode->south;
       removeNode->north->skipdown += 1;
+      removeNode->north->skipdown += removeNode->skipdown;
     }
     if (removeNode->south) {
       removeNode->south->north = removeNode->north;
       removeNode->south->skipup += 1;
+      removeNode->south->skipup += removeNode->skipup;
     }
 
     delete removeNode;
