@@ -60,8 +60,6 @@ ImgList::ImgList(PNG& img) {
   ImgNode* topleft = northwest;  // pointer to the ImgNode above the first ImgNode of each row
   ImgNode* topright = new ImgNode();  // pointer to the ImgNode above the last ImgNode of each row
 
-  cout << northwest << endl;
-
   for (unsigned int y = 0; y < img.height(); y++) {
     // special case: construction of first row is slightly different
     if (y == 0) {  
@@ -72,13 +70,7 @@ ImgList::ImgList(PNG& img) {
         HSLAPixel* pixel = img.getPixel(x, y);
         insertTop(left, right, *pixel);
         left = left->east;
-        cout << "insert top node" << endl;
       }
-
-      cout << northwest->east << endl;
-      cout << northwest->east->east << endl;
-
-      cout << "done first row" << endl;
 
     }
 
@@ -93,36 +85,12 @@ ImgList::ImgList(PNG& img) {
       topright->south = right;
       topleft->south = left;
 
-      cout << "topright: " << topright << endl;
-      cout << "topright: " << right->north << endl;
-      cout << "topleft: " << topleft << endl;
-      cout << "topleft: " << left->north << endl;
-      cout << "currleft: " << left << endl;
-      cout << "currleft: " << topleft->south << endl;
-      cout << "currright: " << right << endl;
-      cout << "currright: " << topright->south << endl;
-      cout << "start" << northwest->south << endl;
-      cout << "next" << northwest->south->east << endl;
-
       for (unsigned int x = 1; x < img.width() - 1; x++) {
         HSLAPixel* pixel = img.getPixel(x, y);
         insert(left, right, top, *pixel);
-
-        cout << "currleft: " << left << endl;
-        cout << "middle node: " << left->east << endl;
-        cout << "currright: " << left->east->east << endl;
-        cout << "start" << northwest->south << endl;
-        cout << "next" << northwest->south->east << endl;
-        cout << "end" << northwest->south->east->east << endl;
-
         left = left->east;
         top = top->east;
-        cout << "insert node" << endl;
       }
-
-      cout << "done next row: " << endl;
-    
-
       //update the pointer to the top of the row 
       topleft = topleft->south; 
       topright = topright->south;
@@ -133,9 +101,6 @@ ImgList::ImgList(PNG& img) {
   // construct southeast to be the last node in the ImgList
   southeast = topright; 
 
-  cout << "start" << northwest->south << endl;
-  cout << "next" << northwest->south->east << endl;
-  cout << "end" << northwest->south->east->east << endl;
 }
 
 
@@ -311,10 +276,8 @@ ImgNode* ImgList::SelectNode(ImgNode* rowstart, int selectionmode) {
   // selectionmode 0
   if (selectionmode == 0) {
     double lMin = currNode->colour.l;
-    cout << "Dimension: " << GetDimensionX() << endl;
-    cout << currNode->east->east << endl;
+
     while (currNode->east->east) {
-      cout << "nope" << endl;
       if (currNode->east->colour.l < lMin) {
         lMin = currNode->east->colour.l;
         selectedNode = currNode->east;
@@ -389,7 +352,7 @@ PNG ImgList::Render(bool fillgaps, int fillmode) const {
 */
 void ImgList::Carve(int selectionmode) {
   ImgNode* currRow = northwest;
-  int i = 1;
+
   while (currRow->south) {
     ImgNode* removeNode = SelectNode(currRow, selectionmode);
     
@@ -420,8 +383,6 @@ void ImgList::Carve(int selectionmode) {
     removeNode = NULL;
   
     currRow = currRow->south;
-    cout << "deleted row: " << i << endl;
-    i++;
   }
 
 }
