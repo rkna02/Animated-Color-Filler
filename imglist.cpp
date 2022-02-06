@@ -53,9 +53,12 @@ ImgList::ImgList() {
 ImgList::ImgList(PNG& img) {
   // build the linked node structure and set the member attributes appropriately
   // case 1: if img is 1x1
+  if (img.width() == 1 && img.height() == 1) {
+    northwest = new ImgNode();
+    southeast = northwest;
+  }
 
-  northwest = new ImgNode();  // pointer to the absolute top left corner of the ImgList
-  southeast = NULL;  // (To be constructed at the end) pointer to the absolute bottom right corner of the ImgList 
+  northwest = new ImgNode();  // pointer to the absolute top left corner of the ImgList 
 
   ImgNode* topleft = northwest;  // pointer to the ImgNode above the first ImgNode of each row
   ImgNode* topright = new ImgNode();  // pointer to the ImgNode above the last ImgNode of each row
@@ -65,10 +68,12 @@ ImgList::ImgList(PNG& img) {
     if (y == 0) {  
       ImgNode* left = topleft;
       ImgNode* right = topright;
+      left->colour = *img.getPixel(0, y);
+      right->colour = *img.getPixel(img.width()-1, y);
 
       for (unsigned int x = 1; x < img.width() - 1; x++) {
         HSLAPixel* pixel = img.getPixel(x, y);
-        insertTop(left, right, *pixel);
+        insertTop(left, right, pixel);
         left = left->east;
       }
 
@@ -76,18 +81,19 @@ ImgList::ImgList(PNG& img) {
 
     // construction of rows below the top row
     else {
-
       ImgNode* left = new ImgNode();
       ImgNode* right = new ImgNode();
       ImgNode* top = topleft->east;
-      right->north = topright;
+      left->colour = *img.getPixel(0, y);
+      right->colour = *img.getPixel(img.width()-1, y);
       left->north = topleft;
-      topright->south = right;
+      right->north = topright;
       topleft->south = left;
-
+      topright->south = right;
+      
       for (unsigned int x = 1; x < img.width() - 1; x++) {
         HSLAPixel* pixel = img.getPixel(x, y);
-        insert(left, right, top, *pixel);
+        insert(left, right, top, pixel);
         left = left->east;
         top = top->east;
       }
@@ -97,10 +103,9 @@ ImgList::ImgList(PNG& img) {
 
     }
   }
-
   // construct southeast to be the last node in the ImgList
   southeast = topright; 
-
+  
 }
 
 
@@ -109,7 +114,7 @@ ImgList::ImgList(PNG& img) {
 * PRE: 
 *
 */
-void ImgList::insert(ImgNode* left, ImgNode* right, ImgNode* top, HSLAPixel pixel) {
+void ImgList::insert(ImgNode* left, ImgNode* right, ImgNode* top, HSLAPixel* pixel) {
 
   ImgNode* node = new ImgNode();
 
@@ -125,14 +130,14 @@ void ImgList::insert(ImgNode* left, ImgNode* right, ImgNode* top, HSLAPixel pixe
   top->south = node;
 
   // colour the node
-  node->colour = pixel;
+  node->colour = *pixel;
 
 }
 
 /*
 * Insert a node between 2 nodes that are next to each other in the top row of an ImgList
 */
-void ImgList::insertTop(ImgNode* left, ImgNode* right, HSLAPixel pixel) {
+void ImgList::insertTop(ImgNode* left, ImgNode* right, HSLAPixel* pixel) {
 
   ImgNode* node = new ImgNode();
 
@@ -144,8 +149,7 @@ void ImgList::insertTop(ImgNode* left, ImgNode* right, HSLAPixel pixel) {
   right->west = node;
 
   // colour the node
-  node->colour = pixel;
-
+  node->colour = *pixel;
 }
 
 /*
@@ -329,9 +333,78 @@ ImgNode* ImgList::SelectNode(ImgNode* rowstart, int selectionmode) {
 *             and the smaller-valued average for diametric hues
 */
 PNG ImgList::Render(bool fillgaps, int fillmode) const {
-  // Add/complete your implementation below
+  unsigned int width1 = GetDimensionX();
+  unsigned int width2 = GetDimensionFullX();
+  unsigned int height = GetDimensionY();
+  PNG outpng;
+  if (fillgaps) {
+    outpng.resize(width2, height);
+  } else {
+    outpng.resize(width1, height);
+  }
   
-  PNG outpng; //this will be returned later. Might be a good idea to resize it at some point.
+  ImgNode* currRow = northwest;
+  ImgNode* currNode = northwest;
+
+  // fillgaps is 0
+  if (!fillgaps) {
+
+    unsigned int y = 0;
+    while (y < height) {
+      unsigned int x = 0;
+      while (x < width1) {
+        HSLAPixel* pixel = outpng.getPixel(x, y);
+        *pixel = currNode->colour;
+        x++;
+        // break early to prevent currNode to point to NULL
+        if (x == width1) {
+          break;
+        }
+        currNode = currNode->east;
+      }
+
+      y++;
+      // break early to prevent currRow to point to NULL
+      if (y == height) {
+        break;
+      }
+      currRow = currRow->south;
+      currNode = currRow;
+    }
+  
+  // fillgaps is 1 and fillmode is 0
+  } else {
+    if (fillmode == 0) {
+
+      unsigned int y = 0;
+      while (y < height) {
+        unsigned int x = 0;
+        while(x < width2) {
+          HSLAPixel* pixel = outpng.getPixel(x, y);
+          *pixel = currNode->colour;
+          x++;
+          for (unsigned int i = 0; i < currNode->skipright; i++) {
+            HSLAPixel* pixel = outpng.getPixel(x, y);
+            *pixel = currNode->colour;
+            x++;
+          }
+          if (x == width2) {
+            break;
+          }
+          currNode = currNode->east;
+        }
+
+        y++;
+        if (y == height) {
+          break;
+        }
+        currRow = currRow->south;
+        currNode = currRow;
+      }
+
+    // fillmode is 1
+    } 
+  }
   
   return outpng;
 }
@@ -353,7 +426,7 @@ PNG ImgList::Render(bool fillgaps, int fillmode) const {
 void ImgList::Carve(int selectionmode) {
   ImgNode* currRow = northwest;
 
-  while (currRow->south) {
+  while (currRow) {
     ImgNode* removeNode = SelectNode(currRow, selectionmode);
     
     // relink left and right ImgNodes and update skip value by 1
@@ -381,7 +454,10 @@ void ImgList::Carve(int selectionmode) {
 
     delete removeNode;
     removeNode = NULL;
-  
+
+    if (!currRow->south) {
+      break;
+    }
     currRow = currRow->south;
   }
 
