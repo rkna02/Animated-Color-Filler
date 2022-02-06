@@ -441,14 +441,14 @@ void ImgList::Carve(int selectionmode) {
 *       the size of the gap.
 */
 void ImgList::Carve(unsigned int rounds, int selectionmode) {
-  int minWidth = GetDimensionX() - 2;
-  if (rounds > minWidth) {
-    rounds = minWidth;
-  }
   for (unsigned int i = 0; i < rounds; i++)  {
-    cout << i+1 << endl;
-    Carve(selectionmode);
+    if (northwest->east->east) {
+      Carve(selectionmode);
+    } else {
+      return;
+    }
   }
+
 }
 
 
