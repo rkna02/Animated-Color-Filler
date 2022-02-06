@@ -351,8 +351,30 @@ PNG ImgList::Render(bool fillgaps, int fillmode) const {
 *       the size of the gap.
 */
 void ImgList::Carve(int selectionmode) {
-  // add your implementation here
-  
+  ImgNode* currRow = northwest;
+
+  while (currRow->south) {
+    ImgNode* removeNode = SelectNode(currRow, selectionmode);
+    removeNode->west->east = removeNode->east;
+    removeNode->east->west = removeNode->west;
+    removeNode->west->skipright += 1;
+    removeNode->east->skipleft += 1;
+
+    // check if the ImgNode is in the first or last row
+    if (removeNode->north) {
+      removeNode->north->south = removeNode->south;
+      removeNode->north->skipdown += 1;
+    }
+    if (removeNode->south) {
+      removeNode->south->north = removeNode->north;
+      removeNode->south->skipup += 1;
+    }
+
+    delete removeNode;
+    removeNode = NULL;
+
+    currRow = currRow->south;
+  }
 }
 
 // note that a node on the boundary will never be selected for removal
@@ -370,8 +392,14 @@ void ImgList::Carve(int selectionmode) {
 *       the size of the gap.
 */
 void ImgList::Carve(unsigned int rounds, int selectionmode) {
-  // add your implementation here
-  
+
+  for (unsigned int i = 0; i < rounds; i++) {
+    if (northwest->east->east) {
+      Carve(selectionmode);
+    } else {
+      return;
+    }
+  }
 }
 
 
