@@ -9,8 +9,6 @@
 
 #include "imglist.h"
 
-#include <iostream>
-
 #include <math.h> // provides fmax, fmin, and fabs functions
 
 /**************************
@@ -29,7 +27,8 @@
 * e.g. Two pixels with hues 90 and 110 differ by 20, but
 *      two pixels with hues 5 and 355 differ by 10.
 */
-double HueDiff(double hue1, double hue2) {
+double HueDiff(double hue1, double hue2)
+{
   return fmin(fabs(hue1 - hue2), fabs(360 + fmin(hue1, hue2) - fmax(hue1, hue2)));
 }
 
@@ -40,45 +39,110 @@ double HueDiff(double hue1, double hue2) {
 /*
 * Default constructor. Makes an empty list
 */
-ImgList::ImgList() {
+ImgList::ImgList()
+{
   // set appropriate values for all member attributes here
-  ImgNode* northwest = NULL;
-  ImgNode* southeast = NULL;
+  northwest = nullptr;
+  southeast = nullptr;
 }
 
-/*
-* Creates a list from image data
-* PRE: img has dimensions of at least 1x1
-*/
-ImgList::ImgList(PNG& img) {
-  // build the linked node structure and set the member attributes appropriately
+//creating one row in isolation
+// ImgNode *ImgList::oneRowIso(PNG &img, int num)
+// {
+//   ImgNode *lead = new ImgNode(); 
+//   ImgNode *tempHead = new ImgNode();
+//   ImgNode *aNode = new ImgNode();
+//   HSLAPixel *apixel = new HSLAPixel();
+//   apixel = img.getPixel(0, num);
+//   lead = aNode;
+//   tempHead = aNode;
+//   aNode->colour = *apixel;
+//   aNode->east = NULL;
+//   aNode->west = NULL;
+//   aNode->north = NULL;
+//   aNode->south = NULL;
+//   aNode->skipright = 0;
+//   aNode->skipleft = 0;
+//   aNode->skipup = 0; 
+//   aNode->skipdown = 0;
 
-  northwest = new ImgNode();  // pointer to the absolute top left corner of the ImgList
-  southeast = NULL;  // (To be constructed at the end) pointer to the absolute bottom right corner of the ImgList 
+//   for (int x = 1; x < img.width() - 1; x++)
+//   {
+//     HSLAPixel *bpixel;
+//     bpixel = img.getPixel(x+1, num);
+//     ImgNode *bNode = new ImgNode(); // the next node on the right
+//     bNode->colour = *bpixel;
+//     bNode->skipright = 0;
+//     bNode->skipleft = 0;
+//     bNode->skipup = 0; 
+//     bNode->skipdown = 0;
+
+//     bNode->west = tempHead;
+//     bNode->north = NULL;
+//     bNode->south = NULL;
+//     tempHead->east = bNode;
+//     tempHead = tempHead->east;
+//   }
+//   tempHead = nullptr;
+//   return lead;
+// }
+
+// /*
+// * Creates a list from image data
+// * PRE: img has dimensions of at least 1x1
+// */
+// ImgList::ImgList(PNG &img)
+// {
+//   // build the linked node structure and set the member attributes appropriately
+  
+//   //const int size = (int)img.height();
+//   ImgNode *array[3];
+
+//   for (int k = 0; k < img.height(); k++)
+//   {
+//     array[0] = oneRowIso(img, k);
+//   }
+//   northwest = array[0];
+
+//   // link the nodes vertically
+//   for (int i = 0; i < img.width() - 1; i++)
+//   {
+//     for (int j = 0; j < img.height() - 1; j++)
+//     {
+//       array[j]->south = array[j + 1];
+//       array[j + 1]->north = array[j];
+//     }
+//     for (int x = 0; x < img.height() - 1; x++)
+//       array[x] = array[x]->east;
+//   }
+// }
+
+ImgList::ImgList(PNG &img)
+{
+  // build the linked node structure and set the member attributes appropriately
+  if (img.width() == 1 && img.height() == 1) {
+    northwest = new ImgNode();
+    southeast = northwest;
+  }
+
+  northwest = new ImgNode();  // pointer to the absolute top left corner of the ImgList 
 
   ImgNode* topleft = northwest;  // pointer to the ImgNode above the first ImgNode of each row
   ImgNode* topright = new ImgNode();  // pointer to the ImgNode above the last ImgNode of each row
-
-  cout << northwest << endl;
 
   for (unsigned int y = 0; y < img.height(); y++) {
     // special case: construction of first row is slightly different
     if (y == 0) {  
       ImgNode* left = topleft;
       ImgNode* right = topright;
+      left->colour = *img.getPixel(0, y);
+      right->colour = *img.getPixel(img.width()-1, y);
 
       for (unsigned int x = 1; x < img.width() - 1; x++) {
         HSLAPixel* pixel = img.getPixel(x, y);
-        insertTop(left, right, *pixel);
+        insertTop(left, right, pixel);
         left = left->east;
       }
-
-      cout << northwest->east << endl;
-      cout << northwest->east->west << endl;
-      cout << northwest->east->east << endl;
-      cout << northwest->east->east->west << endl;
-
-      cout << "done first row" << endl;
 
     }
 
@@ -86,41 +150,59 @@ ImgList::ImgList(PNG& img) {
     else {
       ImgNode* left = new ImgNode();
       ImgNode* right = new ImgNode();
-      ImgNode* top = topleft;
-      right->north = topright;
+      ImgNode* top = topleft->east;
+      left->colour = *img.getPixel(0, y);
+      right->colour = *img.getPixel(img.width()-1, y);
       left->north = topleft;
-      topright->south = right;
+      right->north = topright;
       topleft->south = left;
-
+      topright->south = right;
+      
       for (unsigned int x = 1; x < img.width() - 1; x++) {
         HSLAPixel* pixel = img.getPixel(x, y);
-        insert(left, right, top, *pixel);
+        insert(left, right, top, pixel);
         left = left->east;
         top = top->east;
       }
-      cout << "done next row" << endl;
-
       //update the pointer to the top of the row 
       topleft = topleft->south; 
       topright = topright->south;
 
     }
   }
-
   // construct southeast to be the last node in the ImgList
   southeast = topright; 
-
 }
 
+void ImgList::insertTop(ImgNode *left, ImgNode *right, HSLAPixel* pixel)
+{
+  ImgNode *node = new ImgNode();
 
-/*
-* Insert a node between 2 nodes that are next to each other in a row
-* PRE: 
-*
-*/
-void ImgList::insert(ImgNode* left, ImgNode* right, ImgNode* top, HSLAPixel pixel) {
+  // Link node to the middle of left and right node
+  node->west = left;
+  node->east = right;
 
-  ImgNode* node = new ImgNode();
+  left->east = node;
+  right->west = node;
+
+  // colour the node
+  node->colour = *pixel;
+}
+
+void ImgList::insert(ImgNode *left, ImgNode *right, ImgNode *top, HSLAPixel *pixel)
+{
+
+  // ImgNode *temp = new ImgNode();
+  // left->east = temp;
+  // right->west = temp;
+  // temp->east = right;
+  // temp->west = left;
+
+  // top->south = temp;
+  // temp->north = top;
+
+  // temp->colour = pixel;
+   ImgNode* node = new ImgNode();
 
   // Link node to the middle of left and right node
   node->west = left;
@@ -134,34 +216,15 @@ void ImgList::insert(ImgNode* left, ImgNode* right, ImgNode* top, HSLAPixel pixe
   top->south = node;
 
   // colour the node
-  node->colour = pixel;
-
-}
-
-/*
-* Insert a node between 2 nodes that are next to each other in the top row of an ImgList
-*/
-void ImgList::insertTop(ImgNode* left, ImgNode* right, HSLAPixel pixel) {
-
-  ImgNode* node = new ImgNode();
-
-  // Link node to the middle of left and right node
-  node->west = left;
-  node->east = right;
-
-  left->east= node;
-  right->west = node;
-
-  // colour the node
-  node->colour = pixel;
-
+  node->colour = *pixel;
 }
 
 /*
 * Copy constructor.
 * Creates this this to become a separate copy of the data in otherlist
 */
-ImgList::ImgList(const ImgList& otherlist) {
+ImgList::ImgList(const ImgList &otherlist)
+{
   // build the linked node structure using otherlist as a template
   Copy(otherlist);
 }
@@ -171,17 +234,19 @@ ImgList::ImgList(const ImgList& otherlist) {
 *   where list1 and list2 are both variables of ImgList type.
 * POST: the contents of this list will be a physically separate copy of rhs
 */
-ImgList& ImgList::operator=(const ImgList& rhs) {
+ImgList &ImgList::operator=(const ImgList &rhs)
+{
   // Re-build any existing structure using rhs as a template
-  
-  if (this != &rhs) { // if this list and rhs are different lists in memory
+
+  if (this != &rhs)
+  { // if this list and rhs are different lists in memory
     // release all existing heap memory of this list
-    Clear();    
-    
+    Clear();
+
     // and then rebuild this list using rhs as a template
     Copy(rhs);
   }
-  
+
   return *this;
 }
 
@@ -189,7 +254,8 @@ ImgList& ImgList::operator=(const ImgList& rhs) {
 * Destructor.
 * Releases any heap memory associated with this list.
 */
-ImgList::~ImgList() {
+ImgList::~ImgList()
+{
   // Ensure that any existing heap memory is deallocated
   Clear();
 }
@@ -205,16 +271,18 @@ ImgList::~ImgList() {
 * We expect your solution to take linear time in the number of nodes in the
 *   x dimension.
 */
-unsigned int ImgList::GetDimensionX() const {
+unsigned int ImgList::GetDimensionX() const
+{
   // replace the following line with your implementation
-  int x = 1;
-  ImgNode* loopX = northwest;
-  while (loopX->east) {
-    loopX = loopX->east;
-    x++;
+  ImgNode *temp = northwest;
+  int count = 0;
+  while (temp != nullptr)
+  {
+    count++;
+    temp = temp->east;
   }
-
-  return x;
+  temp = nullptr;
+  return count;
 }
 
 /*
@@ -225,16 +293,19 @@ unsigned int ImgList::GetDimensionX() const {
 * We expect your solution to take linear time in the number of nodes in the
 *   y dimension.
 */
-unsigned int ImgList::GetDimensionY() const {
+unsigned int ImgList::GetDimensionY() const
+{
   // replace the following line with your implementation
-  int y = 1;
-  ImgNode* loopY = northwest;
-  while (loopY->south) {
-    loopY = loopY->south;
-    y++;
+  ImgNode *temp = northwest;
+  int count = 0;
+  while (temp != nullptr)
+  {
+    count++;
+    temp = temp->south;
   }
-
-  return y;
+  temp = nullptr;
+  return count;
+  return -1;
 }
 
 /*
@@ -244,19 +315,11 @@ unsigned int ImgList::GetDimensionY() const {
 * We expect your solution to take linear time in the number of nodes in the
 *   x dimension.
 */
-unsigned int ImgList::GetDimensionFullX() const {
-  ImgNode* currNode = northwest;
-  int width = 1;
-
-  while (currNode->east) {
-    width += currNode->skipright;
-    width += 1;
-    currNode = currNode->east;
-  }
-
-  return width;
+unsigned int ImgList::GetDimensionFullX() const
+{
+  // replace the following line with your implementation
+  return -1;
 }
-
 
 /*
 * Returns a pointer to the node which best satisfies the specified selection criteria.
@@ -277,41 +340,15 @@ unsigned int ImgList::GetDimensionFullX() const {
 * e.g. Two pixels with hues 90 and 110 differ by 20, but
 *      two pixels with hues 5 and 355 differ by 10.
 */
-ImgNode* ImgList::SelectNode(ImgNode* rowstart, int selectionmode) {
+ImgNode *ImgList::SelectNode(ImgNode *rowstart, int selectionmode)
+{
+  // add your implementation below
 
-  ImgNode* currNode = rowstart->east;
-  ImgNode* selectedNode = currNode;
+    
 
-  // selectionmode 0
-  if (selectionmode == 0) {
-    int lmin = currNode->colour.l;
 
-    while (currNode->east->east) {
-      if (currNode->east->colour.l < lmin) {
-        lmin = currNode->east->colour.l;
-        selectedNoDE = currNode->east;
-      }
-      currNode = currNode->east;
-    }
-
-  // selectionmode 1
-  } else {
-    int hMin = HueDiff(currNode, currNode->west->colour.h) + HueDiff(currNode, currNode->east->colour.h); 
-
-    while (currNode->east->east) {
-      currNode = currNode->east;
-      int hueDiff = HueDiff(currNode, currNode->west->colour.h) + HueDiff(currNode, currNode->east->colour.h);
-      
-      if (hueDiff < hmin - 0.10) { // 0.10 makes sure that arithmetric floating point inaccuracies are taken care of 
-        hmin = hueDiff;
-        selectedNode = currNode;
-      }
-    }
-  }
-  
-  return selectedNode;
+  return NULL;
 }
-
 
 /*
 * Renders this list's pixel data to a PNG, with or without filling gaps caused by carving.
@@ -336,11 +373,12 @@ ImgNode* ImgList::SelectNode(ImgNode* rowstart, int selectionmode) {
 *             Like fillmode 1, use the smaller difference interval for hue,
 *             and the smaller-valued average for diametric hues
 */
-PNG ImgList::Render(bool fillgaps, int fillmode) const {
+PNG ImgList::Render(bool fillgaps, int fillmode) const
+{
   // Add/complete your implementation below
-  
+
   PNG outpng; //this will be returned later. Might be a good idea to resize it at some point.
-  
+
   return outpng;
 }
 
@@ -358,39 +396,9 @@ PNG ImgList::Render(bool fillgaps, int fillmode) const {
 *       gaps are linked appropriately, and their skip values are updated to reflect
 *       the size of the gap.
 */
-void ImgList::Carve(int selectionmode) {
-  ImgNode* currRow = northwest;
-
-  while (currRow->south) {
-    ImgNode* removeNode = SelectNode(currRow, selectionmode);
-
-    // relink left and right ImgNodes and update skip value by 1
-    removeNode->west->east = removeNode->east;
-    removeNode->east->west = removeNode->west;
-    removeNode->west->skipright += 1;
-    removeNode->east->skipleft += 1;
-
-    // take the removed node's skip values into account 
-    removeNode->west->skipright += removeNode->skipright;
-    removeNode->east->skipleft += removeNode->skipleft;
-
-    // check if the ImgNode is in the first or last row (north or south points to NULL)
-    if (removeNode->north) {
-      removeNode->north->south = removeNode->south;
-      removeNode->north->skipdown += 1;
-      removeNode->north->skipdown += removeNode->skipdown;
-    }
-    if (removeNode->south) {
-      removeNode->south->north = removeNode->north;
-      removeNode->south->skipup += 1;
-      removeNode->south->skipup += removeNode->skipup;
-    }
-
-    delete removeNode;
-    removeNode = NULL;
-
-    currRow = currRow->south;
-  }
+void ImgList::Carve(int selectionmode)
+{
+  // add your implementation here
 }
 
 // note that a node on the boundary will never be selected for removal
@@ -407,17 +415,10 @@ void ImgList::Carve(int selectionmode) {
 *       gaps are linked appropriately, and their skip values are updated to reflect
 *       the size of the gap.
 */
-void ImgList::Carve(unsigned int rounds, int selectionmode) {
-
-  for (unsigned int i = 0; i < rounds; i++) {
-    if (northwest->east->east) {
-      Carve(selectionmode);
-    } else {
-      return;
-    }
-  }
+void ImgList::Carve(unsigned int rounds, int selectionmode)
+{
+  // add your implementation here
 }
-
 
 /*
 * Helper function deallocates all heap memory associated with this list,
@@ -425,58 +426,97 @@ void ImgList::Carve(unsigned int rounds, int selectionmode) {
 * POST: this list has no currently allocated nor leaking heap memory,
 *       member attributes have values consistent with an empty list.
 */
-void ImgList::Clear() {
-  
- if(!northwest){
-    return;
+void ImgList::Clear()
+{
+  // add your implementation here
+  if(!northwest){
+    return; // the list is empty so there's no need to be cleared
   }
-
-  ImgNode *tempRow;
-  ImgNode *tempCol;
+  // conduct the dealocation
+  ImgNode *tempRow; // 
+  ImgNode *tempCol; // 
   
   tempRow = northwest;
   tempCol = northwest;
 
   int widthCount =0;
-  while(tempRow->east!=NULL){
-    widthCount++;
-    tempRow = tempRow->east;
+  while(tempRow!=NULL){
+    if(tempRow->east=NULL){
+      widthCount++;
+      break;
+    }
+    else{
+      widthCount++;
+      tempRow = tempRow->east;
+    }
+    
   }
+  cout<<" get the width number out"<<endl;
+
   int heightCount=0;
   while(tempCol->south != NULL){
-    tempCol= tempCol->south;
-    heightCount++;
+    if(tempCol!=NULL){
+      heightCount++;
+      break;
+    }
+    else{
+      tempCol= tempCol->south;
+      heightCount++;
+    }
   }
+  cout<<" get the height number out"<<endl;
 
-  ImgNode *node = northwest;
-  int capRemove=0;
+  ImgNode *node = northwest; //this is setting the temporary node;
 
   for(int i=0; i<heightCount; i++){
-    while(northwest!= NULL){
-      if(northwest->east == NULL){
-        delete northwest; // delete the last element of the row 
+    cout<<"outter loop start"<<endl;
+     //ImgNode *node = northwest;
+    for(int k = 0; k< widthCount; k++){
+      cout<<"inner loop start"<<endl;
+      // if(k==0){
+      //   if(!node){
+          
+      //   }
+      //   else{
+      //     delete node;
+      //     node = NULL;
+      //   }
+      //   northwest = northwest -> south;
+      // }
+      // cout<<node->east.colour.h<<endl;
+      cout<<"middle inner loop"<<endl;
+      if(widthCount==1){
 
-        if(capRemove==widthCount){
-          northwest=NULL;
-        }
-        else{
-          northwest = node; 
-        }
       }
       else{
-        // move on 
-        northwest=northwest->east;
+         while(node){ // if node is not null
+          cout<<"while looping"<<endl;
+          if(!node->east){ //if node east is null
+            delete node;
+          }
+          else{
+            node=node->east;
+          }
+        }
+        if(i==heightCount-1 && k==widthCount-1){
+          node = NULL;
+          northwest = NULL;
+          southeast = NULL; 
+        }
+        else{
+          node = northwest;
+        }
+        
       }
-      capRemove++;
+      cout<<"inner loop ends"<<endl;
     }
-    node=node->south;
-    northwest= node;
-    capRemove=0;
+    northwest=northwest->south;
+    cout<<"outter loop ends"<<endl;
   }
-  northwest = NULL;
-  southeast = NULL;
-  
+ 
 
+
+  // deallocate all the node
 }
 
 /* ************************
@@ -487,11 +527,11 @@ void ImgList::Clear() {
 * PARAM: otherlist - list whose contents will be copied
 * POST: this list has contents copied from by physically separate from otherlist
 */
-void ImgList::Copy(const ImgList& otherlist) {
+void ImgList::Copy(const ImgList &otherlist)
+{
   // add your implementation here
 }
 
 /*************************************************************************************************
 * IF YOU DEFINED YOUR OWN PRIVATE FUNCTIONS IN imglist.h, YOU MAY ADD YOUR IMPLEMENTATIONS BELOW *
 *************************************************************************************************/
-
