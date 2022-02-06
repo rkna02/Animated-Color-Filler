@@ -87,8 +87,8 @@ class ImgList {
   * YOU MAY DEFINE YOUR OWN PRIVATE MEMBER FUNCTIONS BELOW *
   *********************************************************/
   private:
-    void insert(ImgNode* left, ImgNode* right, ImgNode* top, HSLAPixel pixel); // inserts a node between the left and right node, also links it to the node above it
-    void insertTop(ImgNode* left, ImgNode* right, HSLAPixel pixel);  // For the top row only, inserts a node between the left and right node
+    void insert(ImgNode* left, ImgNode* right, ImgNode* top, HSLAPixel *pixel); // inserts a node between the left and right node, also links it to the node above it
+    void insertTop(ImgNode* left, ImgNode* right, HSLAPixel *pixel);  // For the top row only, inserts a node between the left and right node
 };
 
 #endif
