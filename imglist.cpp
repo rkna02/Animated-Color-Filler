@@ -454,8 +454,8 @@ void ImgList::Clear()
   cout<<" get the width number out"<<endl;
 
   int heightCount=0;
-  while(tempCol->south != NULL){
-    if(tempCol!=NULL){
+  while(tempCol!= NULL){
+    if(tempCol->south==NULL){
       heightCount++;
       break;
     }
