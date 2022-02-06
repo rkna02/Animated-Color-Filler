@@ -427,41 +427,56 @@ void ImgList::Carve(unsigned int rounds, int selectionmode) {
 */
 void ImgList::Clear() {
   
-  if (!northwest) {
+ if(!northwest){
     return;
   }
 
-  ImgNode* currNode = northwest;
-  ImgNode* nextRow = northwest;
-
-  do {
-
-    // special case: if there is only one node for every row
-    if (!currNode->east) {
-      ImgNode* temp = currNode;
-      currNode = nextRow;
-      delete temp;
-      temp = NULL;
-    
-    } else {
-      do {
-        ImgNode* temp = currNode;
-        currNode = currNode->east;
-        delete temp;
-        temp = NULL;
-      } while (currNode->east); 
-      
-      currNode = nextRow;
-    }
-
-    if (!nextRow->south) {
-      return;
-    } else {
-      nextRow = nextRow->south;
-    }
-
-  } while (nextRow->south);
+  ImgNode *tempRow;
+  ImgNode *tempCol;
   
+  tempRow = northwest;
+  tempCol = northwest;
+
+  int widthCount =0;
+  while(tempRow->east!=NULL){
+    widthCount++;
+    tempRow = tempRow->east;
+  }
+  int heightCount=0;
+  while(tempCol->south != NULL){
+    tempCol= tempCol->south;
+    heightCount++;
+  }
+
+  ImgNode *node = northwest;
+  int capRemove=0;
+
+  for(int i=0; i<heightCount; i++){
+    while(northwest!= NULL){
+      if(northwest->east == NULL){
+        delete northwest; // delete the last element of the row 
+
+        if(capRemove==widthCount){
+          northwest=NULL;
+        }
+        else{
+          northwest = node; 
+        }
+      }
+      else{
+        // move on 
+        northwest=northwest->east;
+      }
+      capRemove++;
+    }
+    node=node->south;
+    northwest= node;
+    capRemove=0;
+  }
+  northwest = NULL;
+  southeast = NULL;
+  
+
 }
 
 /* ************************
