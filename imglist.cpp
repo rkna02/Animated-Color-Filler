@@ -42,8 +42,8 @@ double HueDiff(double hue1, double hue2) {
 */
 ImgList::ImgList() {
   // set appropriate values for all member attributes here
-  ImgNode* northwest = NULL;
-  ImgNode* southeast = NULL;
+  northwest = NULL;
+  southeast = NULL;
 }
 
 /*
@@ -52,6 +52,7 @@ ImgList::ImgList() {
 */
 ImgList::ImgList(PNG& img) {
   // build the linked node structure and set the member attributes appropriately
+  // case 1: if img is 1x1
 
   northwest = new ImgNode();  // pointer to the absolute top left corner of the ImgList
   southeast = NULL;  // (To be constructed at the end) pointer to the absolute bottom right corner of the ImgList 
@@ -71,12 +72,11 @@ ImgList::ImgList(PNG& img) {
         HSLAPixel* pixel = img.getPixel(x, y);
         insertTop(left, right, *pixel);
         left = left->east;
+        cout << "insert top node" << endl;
       }
 
       cout << northwest->east << endl;
-      cout << northwest->east->west << endl;
       cout << northwest->east->east << endl;
-      cout << northwest->east->east->west << endl;
 
       cout << "done first row" << endl;
 
@@ -84,21 +84,44 @@ ImgList::ImgList(PNG& img) {
 
     // construction of rows below the top row
     else {
+
       ImgNode* left = new ImgNode();
       ImgNode* right = new ImgNode();
-      ImgNode* top = topleft;
+      ImgNode* top = topleft->east;
       right->north = topright;
       left->north = topleft;
       topright->south = right;
       topleft->south = left;
 
+      cout << "topright: " << topright << endl;
+      cout << "topright: " << right->north << endl;
+      cout << "topleft: " << topleft << endl;
+      cout << "topleft: " << left->north << endl;
+      cout << "currleft: " << left << endl;
+      cout << "currleft: " << topleft->south << endl;
+      cout << "currright: " << right << endl;
+      cout << "currright: " << topright->south << endl;
+      cout << "start" << northwest->south << endl;
+      cout << "next" << northwest->south->east << endl;
+
       for (unsigned int x = 1; x < img.width() - 1; x++) {
         HSLAPixel* pixel = img.getPixel(x, y);
         insert(left, right, top, *pixel);
+
+        cout << "currleft: " << left << endl;
+        cout << "middle node: " << left->east << endl;
+        cout << "currright: " << left->east->east << endl;
+        cout << "start" << northwest->south << endl;
+        cout << "next" << northwest->south->east << endl;
+        cout << "end" << northwest->south->east->east << endl;
+
         left = left->east;
         top = top->east;
+        cout << "insert node" << endl;
       }
-      cout << "done next row" << endl;
+
+      cout << "done next row: " << endl;
+    
 
       //update the pointer to the top of the row 
       topleft = topleft->south; 
@@ -110,6 +133,9 @@ ImgList::ImgList(PNG& img) {
   // construct southeast to be the last node in the ImgList
   southeast = topright; 
 
+  cout << "start" << northwest->south << endl;
+  cout << "next" << northwest->south->east << endl;
+  cout << "end" << northwest->south->east->east << endl;
 }
 
 
@@ -284,26 +310,29 @@ ImgNode* ImgList::SelectNode(ImgNode* rowstart, int selectionmode) {
 
   // selectionmode 0
   if (selectionmode == 0) {
-    int lmin = currNode->colour.l;
-
+    double lMin = currNode->colour.l;
+    cout << "Dimension: " << GetDimensionX() << endl;
+    cout << currNode->east->east << endl;
     while (currNode->east->east) {
-      if (currNode->east->colour.l < lmin) {
-        lmin = currNode->east->colour.l;
-        selectedNoDE = currNode->east;
+      cout << "nope" << endl;
+      if (currNode->east->colour.l < lMin) {
+        lMin = currNode->east->colour.l;
+        selectedNode = currNode->east;
       }
       currNode = currNode->east;
     }
-
+    
+  
   // selectionmode 1
   } else {
-    int hMin = HueDiff(currNode, currNode->west->colour.h) + HueDiff(currNode, currNode->east->colour.h); 
+    double hMin = HueDiff(currNode->colour.h, currNode->west->colour.h) + HueDiff(currNode->colour.h, currNode->east->colour.h); 
 
     while (currNode->east->east) {
       currNode = currNode->east;
-      int hueDiff = HueDiff(currNode, currNode->west->colour.h) + HueDiff(currNode, currNode->east->colour.h);
+      double hueDiff = HueDiff(currNode->colour.h, currNode->west->colour.h) + HueDiff(currNode->colour.h, currNode->east->colour.h);
       
-      if (hueDiff < hmin - 0.10) { // 0.10 makes sure that arithmetric floating point inaccuracies are taken care of 
-        hmin = hueDiff;
+      if (hueDiff < hMin - 0.10) { // 0.10 makes sure that arithmetric floating point inaccuracies are taken care of 
+        hMin = hueDiff;
         selectedNode = currNode;
       }
     }
@@ -360,10 +389,10 @@ PNG ImgList::Render(bool fillgaps, int fillmode) const {
 */
 void ImgList::Carve(int selectionmode) {
   ImgNode* currRow = northwest;
-
+  int i = 1;
   while (currRow->south) {
     ImgNode* removeNode = SelectNode(currRow, selectionmode);
-
+    
     // relink left and right ImgNodes and update skip value by 1
     removeNode->west->east = removeNode->east;
     removeNode->east->west = removeNode->west;
@@ -373,13 +402,14 @@ void ImgList::Carve(int selectionmode) {
     // take the removed node's skip values into account 
     removeNode->west->skipright += removeNode->skipright;
     removeNode->east->skipleft += removeNode->skipleft;
-
+ 
     // check if the ImgNode is in the first or last row (north or south points to NULL)
     if (removeNode->north) {
       removeNode->north->south = removeNode->south;
       removeNode->north->skipdown += 1;
       removeNode->north->skipdown += removeNode->skipdown;
     }
+ 
     if (removeNode->south) {
       removeNode->south->north = removeNode->north;
       removeNode->south->skipup += 1;
@@ -388,9 +418,12 @@ void ImgList::Carve(int selectionmode) {
 
     delete removeNode;
     removeNode = NULL;
-
+  
     currRow = currRow->south;
+    cout << "deleted row: " << i << endl;
+    i++;
   }
+
 }
 
 // note that a node on the boundary will never be selected for removal
@@ -408,13 +441,13 @@ void ImgList::Carve(int selectionmode) {
 *       the size of the gap.
 */
 void ImgList::Carve(unsigned int rounds, int selectionmode) {
-
-  for (unsigned int i = 0; i < rounds; i++) {
-    if (northwest->east->east) {
-      Carve(selectionmode);
-    } else {
-      return;
-    }
+  int minWidth = GetDimensionX() - 2;
+  if (rounds > minWidth) {
+    rounds = minWidth;
+  }
+  for (unsigned int i = 0; i < rounds; i++)  {
+    cout << i+1 << endl;
+    Carve(selectionmode);
   }
 }
 
@@ -426,7 +459,7 @@ void ImgList::Carve(unsigned int rounds, int selectionmode) {
 *       member attributes have values consistent with an empty list.
 */
 void ImgList::Clear() {
-  
+  /*
   if (!northwest) {
     return;
   }
@@ -461,7 +494,7 @@ void ImgList::Clear() {
     }
 
   } while (nextRow->south);
-  
+  */
 }
 
 /* ************************
