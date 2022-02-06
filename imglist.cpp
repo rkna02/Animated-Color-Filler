@@ -249,6 +249,7 @@ unsigned int ImgList::GetDimensionFullX() const {
   return -1;
 }
 
+
 /*
 * Returns a pointer to the node which best satisfies the specified selection criteria.
 * The first and last nodes in the row cannot be returned.
@@ -269,10 +270,40 @@ unsigned int ImgList::GetDimensionFullX() const {
 *      two pixels with hues 5 and 355 differ by 10.
 */
 ImgNode* ImgList::SelectNode(ImgNode* rowstart, int selectionmode) {
-  // add your implementation below
+
+  ImgNode* currNode = rowstart->east;
+  ImgNode* selectedNode = currNode;
+
+  // selectionmode 0
+  if (selectionmode == 0) {
+    int lmin = currNode->colour.l;
+
+    while (currNode->east->east) {
+      if (currNode->east->colour.l < lmin) {
+        lmin = currNode->east->colour.l;
+        selectedNoDE = currNode->east;
+      }
+      currNode = currNode->east;
+    }
+
+  // selectionmode 1
+  } else {
+    int hMin = HueDiff(currNode, currNode->west->colour.h) + HueDiff(currNode, currNode->east->colour.h); 
+
+    while (currNode->east->east) {
+      currNode = currNode->east;
+      int hueDiff = HueDiff(currNode, currNode->west->colour.h) + HueDiff(currNode, currNode->east->colour.h);
+      
+      if (hueDiff < hmin - 0.10) { // 0.10 makes sure that arithmetric floating point inaccuracies are taken care of 
+        hmin = hueDiff;
+        selectedNode = currNode;
+      }
+    }
+  }
   
-  return NULL;
+  return selectedNode;
 }
+
 
 /*
 * Renders this list's pixel data to a PNG, with or without filling gaps caused by carving.
@@ -357,18 +388,35 @@ void ImgList::Clear() {
   }
 
   ImgNode* currNode = northwest;
-  ImgNode* nextRow = northwest->south;
+  ImgNode* nextRow = northwest;
 
-  while (currNode->south) {
-    while (currNode->east) {
+  do {
+
+    // special case: if there is only one node for every row
+    if (!currNode->east) {
       ImgNode* temp = currNode;
-      currNode = currNode->east;
+      currNode = nextRow;
       delete temp;
       temp = NULL;
+    
+    } else {
+      do {
+        ImgNode* temp = currNode;
+        currNode = currNode->east;
+        delete temp;
+        temp = NULL;
+      } while (currNode->east); 
+      
+      currNode = nextRow;
     }
-    currNode = nextRow;
-    nextRow = nextRow->south;
-  }
+
+    if (!nextRow->south) {
+      return;
+    } else {
+      nextRow = nextRow->south;
+    }
+
+  } while (nextRow->south);
   
 }
 
