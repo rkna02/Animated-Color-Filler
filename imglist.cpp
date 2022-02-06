@@ -110,12 +110,6 @@ ImgList::ImgList(PNG& img) {
   // construct southeast to be the last node in the ImgList
   southeast = topright; 
 
-  int o = GetDimensionX();
-  cout << o << endl;
-
-  int r = GetDimensionY();
-  cout << r << endl;
-
 }
 
 
@@ -357,7 +351,24 @@ void ImgList::Carve(unsigned int rounds, int selectionmode) {
 *       member attributes have values consistent with an empty list.
 */
 void ImgList::Clear() {
-  // add your implementation here
+  
+  if (!northwest) {
+    return;
+  }
+
+  ImgNode* currNode = northwest;
+  ImgNode* nextRow = northwest->south;
+
+  while (currNode->south) {
+    while (currNode->east) {
+      ImgNode* temp = currNode;
+      currNode = currNode->east;
+      delete temp;
+      temp = NULL;
+    }
+    currNode = nextRow;
+    nextRow = nextRow->south;
+  }
   
 }
 
@@ -371,7 +382,6 @@ void ImgList::Clear() {
 */
 void ImgList::Copy(const ImgList& otherlist) {
   // add your implementation here
-  
 }
 
 /*************************************************************************************************
