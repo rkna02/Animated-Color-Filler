@@ -89,6 +89,7 @@ class ImgList {
   private:
     void insert(ImgNode* left, ImgNode* right, ImgNode* top, HSLAPixel* pixel); // inserts a node between the left and right node, also links it to the node above it
     void insertTop(ImgNode* left, ImgNode* right, HSLAPixel* pixel);  // For the top row only, inserts a node between the left and right node
+    double HueAverage(double due1, double hue2) const;
 };
 
 #endif

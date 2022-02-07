@@ -53,10 +53,6 @@ ImgList::ImgList() {
 ImgList::ImgList(PNG& img) {
   // build the linked node structure and set the member attributes appropriately
   // case 1: if img is 1x1
-  if (img.width() == 1 && img.height() == 1) {
-    northwest = new ImgNode();
-    southeast = northwest;
-  }
 
   northwest = new ImgNode();  // pointer to the absolute top left corner of the ImgList 
 
@@ -336,6 +332,32 @@ PNG ImgList::Render(bool fillgaps, int fillmode) const {
   unsigned int width1 = GetDimensionX();
   unsigned int width2 = GetDimensionFullX();
   unsigned int height = GetDimensionY();
+  /*
+  cout << "Testing diametric cases" << endl;
+  double dtest = HueAverage(30.0, 220.0);
+  cout << "30, 220: " << dtest << endl;
+  double dtest1 = HueAverage(80.0, 270.0);
+  cout << "80, 270: " << dtest1 << endl;
+  double dtest2 = HueAverage(0.0, 360.0);
+  cout << "0, 360: " << dtest2 << endl;
+  double dtest3 = HueAverage(360.0, 190.0);
+  cout << "360, 190: " << dtest3 << endl;
+  double dtest4 = HueAverage(35.0, 17.0);
+  cout << "35, 17: " << dtest4 << endl;
+
+  cout << "Testing diametric cases" << endl;
+  double dtest = HueAverage(30.0, 210.0);
+  cout << "30, 210: " << dtest << endl;
+  double dtest1 = HueAverage(90.0, 270.0);
+  cout << "90, 270: " << dtest1 << endl;
+  double dtest2 = HueAverage(0.0, 360.0);
+  cout << "0, 360: " << dtest2 << endl;
+  double dtest3 = HueAverage(360.0, 180.0);
+  cout << "360, 180: " << dtest3 << endl;
+  double dtest4 = HueAverage(350.0, 170.0);
+  cout << "350, 170: " << dtest4 << endl;
+  */
+  
   PNG outpng;
   if (fillgaps) {
     outpng.resize(width2, height);
@@ -401,8 +423,39 @@ PNG ImgList::Render(bool fillgaps, int fillmode) const {
         currRow = currRow->south;
         currNode = currRow;
       }
-
     // fillmode is 1
+    } else if (fillmode == 1) {
+
+      unsigned int y = 0;
+      while (y < height) {
+        unsigned int x = 0;
+        while(x < width2) {
+          HSLAPixel* pixel = outpng.getPixel(x, y);
+          *pixel = currNode->colour;
+          x++;
+          for (unsigned int i = 0; i < currNode->skipright; i++) {
+            HSLAPixel* pixel = outpng.getPixel(x, y);
+            
+            pixel->h = HueAverage(currNode->colour.h, currNode->east->colour.h);
+            pixel->s = (currNode->colour.s + currNode->east->colour.s) / 2.0;
+            pixel->l = (currNode->colour.l + currNode->east->colour.l) / 2.0;
+            pixel->a = (currNode->colour.a + currNode->east->colour.a) / 2.0;
+            x++;
+          }
+          if (x == width2) {
+            break;
+          }
+          currNode = currNode->east;
+        }
+
+        y++;
+        if (y == height) {
+          break;
+        }
+        currRow = currRow->south;
+        currNode = currRow;
+      }
+
     } 
   }
   
@@ -550,3 +603,34 @@ void ImgList::Copy(const ImgList& otherlist) {
 * IF YOU DEFINED YOUR OWN PRIVATE FUNCTIONS IN imglist.h, YOU MAY ADD YOUR IMPLEMENTATIONS BELOW *
 *************************************************************************************************/
 
+/* Note that "average" for hue will use the closer of the angular distances,
+*  e.g. average of 10 and 350 will be 0, instead of 180.
+*  Average of diametric hue values will use the smaller of the two averages
+*  e.g. average of 30 and 210 will be 120, and not 300
+*  average of 170 and 350 will be 80, and not 260
+*/                
+double ImgList::HueAverage(double hue1, double hue2) const{
+  double hueleft = hue1;
+  double hueright = hue2;
+  double hueaverage = 0.0;
+
+  // edge cases for calculating average hue 
+  if (hueleft == 360) {
+    hueleft = 0.0;
+  }
+  if (hueright == 360) {
+    hueright = 0.0;
+  }
+
+  double huediff = HueDiff(hueleft, hueright);
+  if (fmin(hue1, hue2) + huediff == fmax(hue1, hue2)) {
+    hueaverage = huediff / 2.0 + fmin(hueleft, hueright);
+  } else {
+    hueaverage = huediff / 2.0 + fmax(hueleft, hueright);
+    if (hueaverage >= 360) {
+      hueaverage -= 360;
+    }
+  }
+
+  return hueaverage;
+}
