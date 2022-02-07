@@ -332,32 +332,7 @@ PNG ImgList::Render(bool fillgaps, int fillmode) const {
   unsigned int width1 = GetDimensionX();
   unsigned int width2 = GetDimensionFullX();
   unsigned int height = GetDimensionY();
-  /*
-  cout << "Testing diametric cases" << endl;
-  double dtest = HueAverage(30.0, 220.0);
-  cout << "30, 220: " << dtest << endl;
-  double dtest1 = HueAverage(80.0, 270.0);
-  cout << "80, 270: " << dtest1 << endl;
-  double dtest2 = HueAverage(0.0, 360.0);
-  cout << "0, 360: " << dtest2 << endl;
-  double dtest3 = HueAverage(360.0, 190.0);
-  cout << "360, 190: " << dtest3 << endl;
-  double dtest4 = HueAverage(35.0, 17.0);
-  cout << "35, 17: " << dtest4 << endl;
 
-  cout << "Testing diametric cases" << endl;
-  double dtest = HueAverage(30.0, 210.0);
-  cout << "30, 210: " << dtest << endl;
-  double dtest1 = HueAverage(90.0, 270.0);
-  cout << "90, 270: " << dtest1 << endl;
-  double dtest2 = HueAverage(0.0, 360.0);
-  cout << "0, 360: " << dtest2 << endl;
-  double dtest3 = HueAverage(360.0, 180.0);
-  cout << "360, 180: " << dtest3 << endl;
-  double dtest4 = HueAverage(350.0, 170.0);
-  cout << "350, 170: " << dtest4 << endl;
-  */
-  
   PNG outpng;
   if (fillgaps) {
     outpng.resize(width2, height);
@@ -382,6 +357,7 @@ PNG ImgList::Render(bool fillgaps, int fillmode) const {
         if (x == width1) {
           break;
         }
+        // update to next node in the row
         currNode = currNode->east;
       }
 
@@ -390,6 +366,8 @@ PNG ImgList::Render(bool fillgaps, int fillmode) const {
       if (y == height) {
         break;
       }
+
+      // update node for the next row
       currRow = currRow->south;
       currNode = currRow;
     }
@@ -405,17 +383,19 @@ PNG ImgList::Render(bool fillgaps, int fillmode) const {
           HSLAPixel* pixel = outpng.getPixel(x, y);
           *pixel = currNode->colour;
           x++;
+          // keep adding pixels based on the skipvalues
           for (unsigned int i = 0; i < currNode->skipright; i++) {
             HSLAPixel* pixel = outpng.getPixel(x, y);
             *pixel = currNode->colour;
             x++;
           }
+          // break early to prevent currNode to update to NULL
           if (x == width2) {
             break;
           }
           currNode = currNode->east;
         }
-
+        // update to next row and break early to prevent currNode to update to NULL
         y++;
         if (y == height) {
           break;
@@ -433,21 +413,22 @@ PNG ImgList::Render(bool fillgaps, int fillmode) const {
           HSLAPixel* pixel = outpng.getPixel(x, y);
           *pixel = currNode->colour;
           x++;
+          // keep adding pixels based on the skipvalues
           for (unsigned int i = 0; i < currNode->skipright; i++) {
             HSLAPixel* pixel = outpng.getPixel(x, y);
-            
             pixel->h = HueAverage(currNode->colour.h, currNode->east->colour.h);
             pixel->s = (currNode->colour.s + currNode->east->colour.s) / 2.0;
             pixel->l = (currNode->colour.l + currNode->east->colour.l) / 2.0;
             pixel->a = (currNode->colour.a + currNode->east->colour.a) / 2.0;
             x++;
           }
+          // break early to prevent currNode to update to NULL
           if (x == width2) {
             break;
           }
           currNode = currNode->east;
         }
-
+        // update to next row and break early to prevent currNode to update to NULL
         y++;
         if (y == height) {
           break;
@@ -498,7 +479,6 @@ void ImgList::Carve(int selectionmode) {
       removeNode->north->skipdown += 1;
       removeNode->north->skipdown += removeNode->skipdown;
     }
- 
     if (removeNode->south) {
       removeNode->south->north = removeNode->north;
       removeNode->south->skipup += 1;
@@ -532,6 +512,7 @@ void ImgList::Carve(int selectionmode) {
 */
 void ImgList::Carve(unsigned int rounds, int selectionmode) {
   for (unsigned int i = 0; i < rounds; i++)  {
+    // check if 'rounds' exceeds width -2
     if (northwest->east->east) {
       Carve(selectionmode);
     } else {
@@ -621,7 +602,7 @@ double ImgList::HueAverage(double hue1, double hue2) const{
   if (hueright == 360) {
     hueright = 0.0;
   }
-
+  
   double huediff = HueDiff(hueleft, hueright);
   if (fmin(hue1, hue2) + huediff == fmax(hue1, hue2)) {
     hueaverage = huediff / 2.0 + fmin(hueleft, hueright);
