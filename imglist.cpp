@@ -55,15 +55,35 @@ ImgList::ImgList(PNG& img) {
   // case 1: if img is 1x1
 
   northwest = new ImgNode();  // pointer to the absolute top left corner of the ImgList 
-
   ImgNode* topleft = northwest;  // pointer to the ImgNode above the first ImgNode of each row
+
+  cout << "Adress of northwest: " << northwest << endl;
+
+  if (img.width() == 1) {
+    for (unsigned int y = 1; y < img.height(); y++) {
+      ImgNode* node = new ImgNode();
+      node->north = topleft;
+      topleft->south = node;
+      topleft = topleft->south;
+    }
+    southeast = topleft;
+    return;
+  }
+
   ImgNode* topright = new ImgNode();  // pointer to the ImgNode above the last ImgNode of each row
+
+  cout << "Adress of top left and top right: " << topleft << " " << topright << endl;
 
   for (unsigned int y = 0; y < img.height(); y++) {
     // special case: construction of first row is slightly different
     if (y == 0) {  
       ImgNode* left = topleft;
       ImgNode* right = topright;
+      left->east = right;
+      right->west = left;
+
+      cout << "adress of left and right: " << left << " " << right << endl;
+
       left->colour = *img.getPixel(0, y);
       right->colour = *img.getPixel(img.width()-1, y);
 
@@ -73,17 +93,27 @@ ImgList::ImgList(PNG& img) {
         left = left->east;
       }
 
-    }
+      // if image only has one row
+      if (img.height() == 1) {
+        southeast = right;
+        return;
+      }
 
+    }
     // construction of rows below the top row
     else {
       ImgNode* left = new ImgNode();
       ImgNode* right = new ImgNode();
+
+      cout << "adress of left and right: " << left << " " << right << endl;
+
       ImgNode* top = topleft->east;
       left->colour = *img.getPixel(0, y);
       right->colour = *img.getPixel(img.width()-1, y);
       left->north = topleft;
       right->north = topright;
+      left->east = right;
+      right->west = left;
       topleft->south = left;
       topright->south = right;
       
@@ -98,6 +128,7 @@ ImgList::ImgList(PNG& img) {
       topright = topright->south;
 
     }
+    
   }
   // construct southeast to be the last node in the ImgList
   southeast = topright; 
@@ -185,6 +216,7 @@ ImgList::~ImgList() {
   Clear();
 }
 
+
 /************
 * ACCESSORS *
 ************/
@@ -197,7 +229,7 @@ ImgList::~ImgList() {
 *   x dimension.
 */
 unsigned int ImgList::GetDimensionX() const {
-  // replace the following line with your implementation
+  
   int x = 1;
   ImgNode* loopX = northwest;
   while (loopX->east) {
@@ -206,6 +238,7 @@ unsigned int ImgList::GetDimensionX() const {
   }
 
   return x;
+
 }
 
 /*
@@ -217,7 +250,7 @@ unsigned int ImgList::GetDimensionX() const {
 *   y dimension.
 */
 unsigned int ImgList::GetDimensionY() const {
-  // replace the following line with your implementation
+  
   int y = 1;
   ImgNode* loopY = northwest;
   while (loopY->south) {
@@ -226,6 +259,7 @@ unsigned int ImgList::GetDimensionY() const {
   }
 
   return y;
+  
 }
 
 /*
@@ -236,6 +270,7 @@ unsigned int ImgList::GetDimensionY() const {
 *   x dimension.
 */
 unsigned int ImgList::GetDimensionFullX() const {
+  
   ImgNode* currNode = northwest;
   int width = 1;
 
@@ -246,6 +281,7 @@ unsigned int ImgList::GetDimensionFullX() const {
   }
 
   return width;
+  
 }
 
 
@@ -269,7 +305,7 @@ unsigned int ImgList::GetDimensionFullX() const {
 *      two pixels with hues 5 and 355 differ by 10.
 */
 ImgNode* ImgList::SelectNode(ImgNode* rowstart, int selectionmode) {
-
+  
   ImgNode* currNode = rowstart->east;
   ImgNode* selectedNode = currNode;
 
@@ -302,6 +338,7 @@ ImgNode* ImgList::SelectNode(ImgNode* rowstart, int selectionmode) {
   }
   
   return selectedNode;
+  
 }
 
 
@@ -329,6 +366,7 @@ ImgNode* ImgList::SelectNode(ImgNode* rowstart, int selectionmode) {
 *             and the smaller-valued average for diametric hues
 */
 PNG ImgList::Render(bool fillgaps, int fillmode) const {
+  
   unsigned int width1 = GetDimensionX();
   unsigned int width2 = GetDimensionFullX();
   unsigned int height = GetDimensionY();
@@ -441,6 +479,7 @@ PNG ImgList::Render(bool fillgaps, int fillmode) const {
   }
   
   return outpng;
+  
 }
 
 /************
@@ -458,6 +497,7 @@ PNG ImgList::Render(bool fillgaps, int fillmode) const {
 *       the size of the gap.
 */
 void ImgList::Carve(int selectionmode) {
+  
   ImgNode* currRow = northwest;
 
   while (currRow) {
@@ -493,7 +533,7 @@ void ImgList::Carve(int selectionmode) {
     }
     currRow = currRow->south;
   }
-
+  
 }
 
 // note that a node on the boundary will never be selected for removal
@@ -511,6 +551,7 @@ void ImgList::Carve(int selectionmode) {
 *       the size of the gap.
 */
 void ImgList::Carve(unsigned int rounds, int selectionmode) {
+  
   for (unsigned int i = 0; i < rounds; i++)  {
     // check if 'rounds' exceeds width -2
     if (northwest->east->east) {
@@ -529,43 +570,42 @@ void ImgList::Carve(unsigned int rounds, int selectionmode) {
 * POST: this list has no currently allocated nor leaking heap memory,
 *       member attributes have values consistent with an empty list.
 */
-void ImgList::Clear() {
-  /*
-  if (!northwest) {
-    return;
+void ImgList::Clear()
+{
+  // add your implementation here
+  if(!northwest){
+    return; // the list is empty so there's no need to be cleared
   }
 
-  ImgNode* currNode = northwest;
-  ImgNode* nextRow = northwest;
+  // conduct the dealocation
+  ImgNode *tempRow = northwest; 
+  ImgNode *node;
 
-  do {
+  int widthCount = GetDimensionX();
+  int heightCount = GetDimensionY();
 
-    // special case: if there is only one node for every row
-    if (!currNode->east) {
-      ImgNode* temp = currNode;
-      currNode = nextRow;
-      delete temp;
-      temp = NULL;
-    
-    } else {
-      do {
-        ImgNode* temp = currNode;
-        currNode = currNode->east;
-        delete temp;
-        temp = NULL;
-      } while (currNode->east); 
-      
-      currNode = nextRow;
+  for(int y = 0; y < heightCount; y++){
+
+    ImgNode* tempCol = tempRow;  // reset tempCol to be on the same row as tempRow
+    if (tempRow->south) {
+      tempRow = tempRow->south;
     }
 
-    if (!nextRow->south) {
-      return;
-    } else {
-      nextRow = nextRow->south;
+    for(int x = 0; x < widthCount; x++){
+      // update node to be on current column
+      node = tempCol;
+
+      // if list has multiple columns
+      if (tempCol->east) {
+        tempCol = tempCol->east;
+      }
+      delete node;
+      node = NULL;
     }
 
-  } while (nextRow->south);
-  */
+  }
+
+  // deallocate all the node
 }
 
 /* ************************
@@ -591,6 +631,7 @@ void ImgList::Copy(const ImgList& otherlist) {
 *  average of 170 and 350 will be 80, and not 260
 */                
 double ImgList::HueAverage(double hue1, double hue2) const{
+  
   double hueleft = hue1;
   double hueright = hue2;
   double hueaverage = 0.0;
@@ -614,4 +655,5 @@ double ImgList::HueAverage(double hue1, double hue2) const{
   }
 
   return hueaverage;
+  
 }
